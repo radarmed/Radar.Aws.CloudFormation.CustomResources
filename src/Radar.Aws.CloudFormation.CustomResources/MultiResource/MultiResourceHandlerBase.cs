@@ -4,6 +4,7 @@ namespace Radar.Aws.CloudFormation.CustomResources.MultiResource
     using System.Text.Json;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
+    using Util;
 
     // The interface the the MultiResourceRouterBase cares about
     public interface IResourceHandler
@@ -35,13 +36,13 @@ namespace Radar.Aws.CloudFormation.CustomResources.MultiResource
             set
             {
                 _request = value;
-                if (value.ResourceProperties != null)
+                if (!DynamicUtil.IsNull(value.ResourceProperties))
                 {
-                    ResourceProperties = FromDynamic<TRequest>(value.ResourceProperties);
+                    ResourceProperties = DynamicUtil.FromDynamic<TRequest>(value.ResourceProperties);
                 }
-                if (value.OldResourceProperties != null)
+                if (!DynamicUtil.IsNull(value.OldResourceProperties))
                 {
-                    OldResourceProperties = FromDynamic<TRequest>(value.OldResourceProperties);
+                    OldResourceProperties = DynamicUtil.FromDynamic<TRequest>(value.OldResourceProperties);
                 }
             }
         }
@@ -63,7 +64,7 @@ namespace Radar.Aws.CloudFormation.CustomResources.MultiResource
             bool sendResponse = await action();
             if (sendResponse)
             {
-                Response.Data = ToDynamic(ResponseData);
+                Response.Data = DynamicUtil.ToDynamic(ResponseData);
             }
             return sendResponse;
         }

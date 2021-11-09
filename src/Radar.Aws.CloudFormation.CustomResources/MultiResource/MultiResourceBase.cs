@@ -6,31 +6,13 @@ namespace Radar.Aws.CloudFormation.CustomResources.MultiResource
     using System.Threading;
     using System.Threading.Tasks;
     using Amazon.Lambda.Core;
+    using Util;
 
     public abstract class MultiResourceBase
     {
-        private readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions();
-
         public virtual MultiResourceRequest Request { get; set; }
         public MultiResourceResponse Response { get; set; }
         public ILambdaContext Context { get; set; }
-
-        protected string Serialize(object obj)
-        {
-            return JsonSerializer.Serialize(obj, _jsonSerializerOptions);
-        }
-
-        protected dynamic ToDynamic(object obj)
-        {
-            string serialized = Serialize(obj);
-            return JsonSerializer.Deserialize<dynamic>(serialized, _jsonSerializerOptions);
-        }
-
-        protected T FromDynamic<T>(dynamic obj)
-        {
-            string serialized = Serialize(obj);
-            return JsonSerializer.Deserialize<T>(serialized, _jsonSerializerOptions);
-        }
 
         protected void Log(string message)
         {
@@ -39,14 +21,14 @@ namespace Radar.Aws.CloudFormation.CustomResources.MultiResource
 
         protected void LogJson(string message, object obj)
         {
-            Log(string.Format(message, Serialize(obj)));
+            Log(string.Format(message, SerializeUtil.Serialize(obj)));
         }
 
         protected bool SendResponse()
         {
             try
             {
-                string json = JsonSerializer.Serialize((object)Response, new JsonSerializerOptions());
+                string json = SerializeUtil.Serialize((object)Response);
                 Log($"RESPONSE: {json}");
 
                 var httpClient = new HttpClient();
