@@ -1,0 +1,70 @@
+Description: >
+  Create the private ECR repo to hold image for lambda-backed custom resources,
+  and create the lambda function
+
+Parameters:
+
+  StackGroup:
+    Type: String
+    Default: RADAR
+    Description: >
+      Identifier to group related stacks together for the purpose of sharing
+      exported output values.
+
+  RepoName:
+    Type: String
+    Default: radar-aws-cloudformation-customresources
+    Description: Name of ECR private repo
+
+  RepoPrincipals:
+    Type: CommaDelimitedList
+    Default: None
+    Description: ARNs for IAM principals that can upload to the lambda repo
+
+  RepoScanOnPush:
+    Type: String
+    Default: true
+    AllowedValues: [true,false]
+    Description: Scan any image pushed to the repository
+
+Conditions:
+
+  HasPrincipals: !Not [!Equals [ !Select [ 0, !Ref RepoPrincipals], None ]]
+
+Resources:
+
+  Repo: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: !Ref RepoName
+      ImageScanningConfiguration:
+        ScanOnPush: !Ref RepoScanOnPush
+      RepositoryPolicyText: !If 
+      - HasPrincipals
+      - Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal: 
+              AWS: !Ref RepoPrincipals
+            Action: 
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:BatchGetImage"
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:PutImage"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:UploadLayerPart"
+              - "ecr:CompleteLayerUpload"
+      - !Ref AWS::NoValue
+
+      Tags:
+        - Key: Name
+          Value: !Ref StackGroup
+
+Outputs:
+
+  PrivateRepoUri:
+    Description: Private repo Uri
+    Value: !GetAtt Repo.RepositoryUri
+    Export:
+      Name: !Sub "${StackGroup}-RadarCustomResourcesPrivateRepoUri"

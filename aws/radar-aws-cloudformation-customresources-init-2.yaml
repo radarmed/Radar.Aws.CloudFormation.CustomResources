@@ -1,0 +1,87 @@
+Description: >
+  Create the private ECR repo to hold image for lambda-backed custom resources,
+  and create the lambda function
+
+Parameters:
+
+  StackGroup:
+    Type: String
+    Default: RADAR
+    Description: >
+      Identifier to group related stacks together for the purpose of sharing
+      exported output values.
+
+Resources:
+
+  LambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+      - PolicyName: RouteManipulation
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeRouteTables
+            - ec2:CreateRoute
+            - ec2:DeleteRoute
+            Resource:
+            - !Join
+              - ''
+              - - "arn:aws:ec2:"
+                - !Ref AWS::Region
+                - ':'
+                - !Ref AWS::AccountId
+                - ':/route-table/*'
+
+      Tags:
+        - Key: Name
+          Value: !Ref StackGroup
+
+  Lambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ImageUri: 
+          !Join
+          - ''
+          -
+            - Fn::ImportValue:
+                !Sub "${StackGroup}-RadarCustomResourcesPrivateRepoUri"
+            - ":latest"
+      Tags:
+        - Key: Name
+          Value: !Ref StackGroup
+      MemorySize: 128
+      PackageType: Image
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 5
+      ImageConfig:
+        EntryPoint:
+          - /lambda-entrypoint.sh
+        Command:
+          - 'Radar.Aws.CloudFormation.CustomResources::Radar.Aws.CloudFormation.CustomResources.RequestRouter::Route'
+    Metadata:
+      DockerContext: .
+      Dockerfile: Dockerfile
+      DockerTag: ''
+
+Outputs:
+
+  ServiceToken:
+    Description: The ARN to the Lambda function to be used as a custom resource service token.
+    Value: !GetAtt Lambda.Arn
+    Export:
+      Name: !Sub "${StackGroup}-RadarCustomResourcesServiceToken"
