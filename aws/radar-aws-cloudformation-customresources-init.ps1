@@ -9,7 +9,7 @@ Write-Host "***** Creating local ECR repo for RADAR cfn custom resources lambda 
 Write-Host "***** Setting up"
 $x = (New-Guid).Guid
 $bucket = "radarmed-cfn-$x"
-./radar-aws-cloudformation-customresources-init.ps1
+./radar-aws-cloudformation-customresources-init-vars.ps1
 
 Write-Host "***** Create temporary s3 bucket $bucket for cfn template"
 aws s3api create-bucket --bucket $bucket --acl private
